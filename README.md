@@ -1,10 +1,12 @@
 # cuda-for-deep-learning
 Transparent CUDNN / CUBLAS usage for the deep learning training using MNIST dataset.
 
+Version modified by me to work with cuDNN 11
+[original repo here https://github.com/haanjack/cudnn-mnist-training]
 # How to use
 
 ```bash
-$ git clone https://github.com/haanjack/cudnn-mnist-training
+$ git clone https://github.com/...
 $ cd cudnn-mnist-training
 $ bash download-mnist-dataset.sh
 $ make

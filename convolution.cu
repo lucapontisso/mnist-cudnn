@@ -11,9 +11,9 @@ int main()
     cudnnConvolutionDescriptor_t conv_desc;
     cudnnTensorDescriptor_t bias_desc;
 
-    cudnnConvolutionFwdAlgo_t falgo;
-    cudnnConvolutionBwdFilterAlgo_t b_falgo;
-    cudnnConvolutionBwdDataAlgo_t b_dalgo;
+    cudnnConvolutionFwdAlgoPerf_t falgo;
+    cudnnConvolutionBwdFilterAlgoPerf_t b_falgo;
+    cudnnConvolutionBwdDataAlgoPerf_t b_dalgo;
 
     float *d_input = nullptr;
     float *d_output = nullptr;
@@ -79,18 +79,19 @@ int main()
     size_t workspace_size = 0;
     size_t temp_size = 0;
     float *d_workspace = nullptr;
-    cudnnGetConvolutionForwardAlgorithm(cudnn, input_desc, filter_desc, conv_desc, output_desc, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &falgo);
-    cudnnGetConvolutionForwardWorkspaceSize(cudnn, input_desc, filter_desc, conv_desc, output_desc, falgo, &temp_size);
+    //cudnnGetConvolutionForwardAlgorithm(cudnn, input_desc, filter_desc, conv_desc, output_desc, CUDNN_CONVOLUTION_FWD_PREFER_FASTEST, 0, &falgo);
+    cudnnFindConvolutionForwardAlgorithm(cudnn, input_desc, filter_desc, conv_desc, output_desc, 10, 0, &falgo);
+    cudnnGetConvolutionForwardWorkspaceSize(cudnn, input_desc, filter_desc, conv_desc, output_desc, falgo.algo, &temp_size);
     workspace_size = max(workspace_size, temp_size);
 
     // convolution (bwd - filter)
-    cudnnGetConvolutionBackwardFilterAlgorithm(cudnn, input_desc, output_desc, conv_desc, filter_desc, CUDNN_CONVOLUTION_BWD_FILTER_PREFER_FASTEST, 0, &b_falgo);
-    cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnn, input_desc, output_desc, conv_desc, filter_desc, b_falgo, &temp_size);
+    cudnnFindConvolutionBackwardFilterAlgorithm(cudnn, input_desc, output_desc, conv_desc, filter_desc, 10, 0, &b_falgo);
+    cudnnGetConvolutionBackwardFilterWorkspaceSize(cudnn, input_desc, output_desc, conv_desc, filter_desc, b_falgo.algo, &temp_size);
     workspace_size = max(workspace_size, temp_size);
 
     // convolution (bwd - data)
-    cudnnGetConvolutionBackwardDataAlgorithm(cudnn, filter_desc, output_desc, conv_desc, input_desc, CUDNN_CONVOLUTION_BWD_DATA_PREFER_FASTEST, 0, &b_dalgo);
-    cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn, filter_desc, output_desc, conv_desc, input_desc, b_dalgo, &temp_size);
+    cudnnFindConvolutionBackwardDataAlgorithm(cudnn, filter_desc, output_desc, conv_desc, input_desc, 10, 0, &b_dalgo);
+    cudnnGetConvolutionBackwardDataWorkspaceSize(cudnn, filter_desc, output_desc, conv_desc, input_desc, b_dalgo.algo, &temp_size);
     workspace_size = max(workspace_size, temp_size);
 
     std::cout << "workspace size: " << workspace_size << std::endl;
@@ -106,7 +107,7 @@ int main()
     std::cout << "[" <<  __LINE__ << "]" << std::endl;
 
     // Forward
-    checkCudnnErrors(cudnnConvolutionForward(cudnn, &one, input_desc, d_input, filter_desc, d_filter, conv_desc, falgo, d_workspace, workspace_size, &zero, output_desc, d_output));
+    checkCudnnErrors(cudnnConvolutionForward(cudnn, &one, input_desc, d_input, filter_desc, d_filter, conv_desc, falgo.algo, d_workspace, workspace_size, &zero, output_desc, d_output));
     checkCudnnErrors(cudnnAddTensor(cudnn, &one, bias_desc, d_bias, &one, output_desc, d_output));
     checkCudaErrors(cudaGetLastError());
     
@@ -114,8 +115,8 @@ int main()
 
     // backward
     checkCudnnErrors(cudnnConvolutionBackwardBias(cudnn, &one, output_desc, d_output, &zero, bias_desc, d_bias));
-    checkCudnnErrors(cudnnConvolutionBackwardFilter(cudnn, &one, input_desc, d_input, output_desc, d_output, conv_desc, b_falgo, d_workspace, workspace_size, &zero, filter_desc, d_filter));
-    checkCudnnErrors(cudnnConvolutionBackwardData(cudnn, &one, filter_desc, d_filter, output_desc, d_output, conv_desc, b_dalgo, d_workspace, workspace_size, &zero, input_desc, d_input));
+    checkCudnnErrors(cudnnConvolutionBackwardFilter(cudnn, &one, input_desc, d_input, output_desc, d_output, conv_desc, b_falgo.algo, d_workspace, workspace_size, &zero, filter_desc, d_filter));
+    checkCudnnErrors(cudnnConvolutionBackwardData(cudnn, &one, filter_desc, d_filter, output_desc, d_output, conv_desc, b_dalgo.algo, d_workspace, workspace_size, &zero, input_desc, d_input));
     checkCudaErrors(cudaGetLastError());
     
     std::cout << "[" <<  __LINE__ << "]" << std::endl;
