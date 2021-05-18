@@ -6,7 +6,7 @@ Version modified by me to work with cuDNN 11
 # How to use
 
 ```bash
-$ git clone https://github.com/...
+$ git clone https://github.com/lucapontisso/mnist-cudnn.git
 $ cd cudnn-mnist-training
 $ bash download-mnist-dataset.sh
 $ make
